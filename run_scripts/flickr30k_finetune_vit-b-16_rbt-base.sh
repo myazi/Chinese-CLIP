@@ -8,11 +8,11 @@
 # Command: bash run_scripts/muge_finetune_vit-b-16_rbt-base.sh ${DATAPATH}
 
 # Number of GPUs per GPU worker
-GPUS_PER_NODE=8 
+GPUS_PER_NODE=8
 # Number of GPU workers, for single-worker training, please set to 1
 WORKER_CNT=1
 # The ip address of the rank-0 worker, for single-worker training, please set to localhost
-export MASTER_ADDR=XX.XX.XX.XX
+export MASTER_ADDR=127.0.0.1
 # The port for communication
 export MASTER_PORT=8514
 # The rank of this worker, should be in {0, ..., WORKER_CNT-1}, for single-worker training, please set to 0
@@ -22,19 +22,21 @@ export PYTHONPATH=${PYTHONPATH}:`pwd`/cn_clip/
 
 DATAPATH=${1}
 
+task_name=${2}
+
 # data options
-train_data=${DATAPATH}/datasets/Flickr30k-CN/lmdb/train
-val_data=${DATAPATH}/datasets/Flickr30k-CN/lmdb/valid # if val_data is not specified, the validation will be automatically disabled
+train_data=${DATAPATH}/datasets/${task_name}/lmdb/train
+val_data=${DATAPATH}/datasets/${task_name}/lmdb/valid # if val_data is not specified, the validation will be automatically disabled
 
 # restore options
-resume=${DATAPATH}/pretrained_weights/clip_cn_vit-b-16.pt # or specify your customed ckpt path to resume
+resume=${DATAPATH}/pretrained_weights/clip_cn_vit-h-14.pt # or specify your customed ckpt path to resume
 reset_data_offset="--reset-data-offset"
 reset_optimizer="--reset-optimizer"
 # reset_optimizer=""
 
 # output options
 output_base_dir=${DATAPATH}/experiments/
-name=flickr30k_finetune_vit-b-16_roberta-base_bs128_8gpu
+name=${task_name}_clip_cn_vit-h-14
 save_step_frequency=999999 # disable it
 save_epoch_frequency=1
 log_interval=1
@@ -44,20 +46,20 @@ report_training_batch_acc="--report-training-batch-acc"
 # training hyper-params
 context_length=52
 warmup=100
-batch_size=128
-valid_batch_size=128
+batch_size=256
+valid_batch_size=256
 accum_freq=1
-lr=5e-5
+lr=9e-5
 wd=0.001
-max_epochs=3  # or you can alternatively specify --max-steps
-valid_step_interval=150
+max_epochs=10  # or you can alternatively specify --max-steps
+valid_step_interval=10000
 valid_epoch_interval=1
-vision_model=ViT-B-16
-text_model=RoBERTa-wwm-ext-base-chinese
+vision_model=ViT-H-14
+text_model=RoBERTa-wwm-ext-large-chinese
 use_augment="--use-augment"
 # use_augment=""
 
-python3 -m torch.distributed.launch --use_env --nproc_per_node=${GPUS_PER_NODE} --nnodes=${WORKER_CNT} --node_rank=${RANK} \
+/apdcephfs_cq11/share_2973545/wenjieying/anaconda3/envs/python_clip/bin/python -m torch.distributed.launch --use_env --nproc_per_node=${GPUS_PER_NODE} --nnodes=${WORKER_CNT} --node_rank=${RANK} \
           --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} cn_clip/training/main.py \
           --train-data=${train_data} \
           --val-data=${val_data} \
@@ -82,4 +84,6 @@ python3 -m torch.distributed.launch --use_env --nproc_per_node=${GPUS_PER_NODE} 
           --max-epochs=${max_epochs} \
           --vision-model=${vision_model} \
           ${use_augment} \
-          --text-model=${text_model}
+          --text-model=${text_model} \
+          --grad-checkpointing \
+	  #--use-flash-attention

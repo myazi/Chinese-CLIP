@@ -1,2 +1,0 @@
-#/root/anaconda3/envs/python_base/bin/img2dataset --url_list=41370a5f-1cbb-4921-9896-99ad986fdb90.txt --output_folder=images --thread_count=32 --input_format=tsv --url_col=image_url --save_additional_columns="['component_id', 'component_source', 'auto_image_label_name']" --output_format parquet
-#/root/anaconda3/envs/python_base/bin/img2dataset --url_list=show_cid_url_uniq --output_folder=images_sub --thread_count=6 --input_format=tsv --url_col=image_url --save_additional_columns="['component_id', 'component_source', 'auto_image_label_name']" --output_format parquet

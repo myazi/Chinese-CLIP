@@ -113,6 +113,7 @@ class LMDBDataset(Dataset):
         text = tokenize([_preprocess_text(raw_text)], context_length=self.max_txt_length)[0]
         eos_index = text.numpy().tolist().index(_tokenizer.vocab['[SEP]'])
         return image, text, eos_index
+        #return image, text, text_id, image_id
 
 
 def pad_dataset(dataset, global_batch_size):

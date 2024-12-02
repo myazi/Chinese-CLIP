@@ -84,7 +84,11 @@ def available_models() -> List[str]:
 def load_from_name(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu",
                    download_root: str = None, vision_model_name: str = None, text_model_name: str = None, input_resolution: int = None):
     if name in _MODELS:
-        model_path = _download(_MODELS[name], download_root or os.path.expanduser("~/.cache/clip"))
+        #model_path = _download(_MODELS[name], download_root or os.path.expanduser("~/.cache/clip"))
+        #model_path = "/apdcephfs_cq11/share_2973545/wenjieying/component/Chinese-CLIP/clip_cn_vit-h-14.pt"
+        #model_path = "/apdcephfs_cq11/share_2973545/wenjieying/component/Chinese-CLIP/data/experiments/0418_train_2_2_clip_cn_vit-h-14/checkpoints/epoch16.pt"
+        model_path = download_root
+        print(model_path)
         model_name, model_input_resolution = _MODEL_INFO[name]['struct'], _MODEL_INFO[name]['input_resolution']
     elif os.path.isfile(name):
         assert vision_model_name and text_model_name and input_resolution, "Please specify specific 'vision_model_name', 'text_model_name', and 'input_resolution'"
@@ -92,7 +96,6 @@ def load_from_name(name: str, device: Union[str, torch.device] = "cuda" if torch
         model_name, model_input_resolution = f'{vision_model_name}@{text_model_name}', input_resolution
     else:
         raise RuntimeError(f"Model {name} not found; available models = {available_models()}")
-
     with open(model_path, 'rb') as opened_file:
         # loading saved checkpoint
         checkpoint = torch.load(opened_file, map_location="cpu")

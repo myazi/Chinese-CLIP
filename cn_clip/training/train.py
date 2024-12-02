@@ -21,6 +21,10 @@ def is_master(args):
 def get_loss(model, images, texts, loss_img, loss_txt, args, accum_image_features=None, accum_text_features=None, accum_idx=-1, teacher_model=None, teacher_accum_image_features=None):
     if args.accum_freq == 1:
         image_features, text_features, logit_scale = model(images, texts, args.mask_ratio)
+        logging.info(
+                f"image_features Size: {image_features.size()} | "
+                f"texts_features Size: {text_features.size()}"
+                )
 
         if args.distllation:
             with torch.no_grad():
@@ -114,12 +118,18 @@ def get_loss(model, images, texts, loss_img, loss_txt, args, accum_image_feature
         + loss_txt(logits_per_text, ground_truth)
     ) / 2
 
+    #total_loss = loss_txt(logits_per_text, ground_truth)
+
     acc = None
     if args.report_training_batch_acc:
         i2t_acc = (logits_per_image.argmax(-1) == ground_truth).sum() / len(logits_per_image)
         t2i_acc = (logits_per_text.argmax(-1) == ground_truth).sum() / len(logits_per_text)
         acc = {"i2t": i2t_acc, "t2i": t2i_acc}
 
+    #logging.info(
+    #        f"logits_per_image Size: {len(logits_per_image)} | "
+    #        f"logits_per_text Size: {len(logits_per_text)}"
+    #        )
     if args.distllation:
         total_loss += kd_loss * args.kd_loss_weight
 
@@ -132,6 +142,25 @@ def freeze_vision_bn(args, model):
         for m in RN_visual_modules:
             if isinstance(m, nn.BatchNorm2d):
                 m.eval()
+
+def distinct_qid(images, texts, text_ids, image_ids):
+
+    tids = set()
+    cids = set()
+    images_list = images.numpy().tolist()
+    texts_list = texts.numpy().tolist()
+    new_images = []
+    new_texts = []
+    for image, text, text_id, image_id in zip(images_list, texts_list, text_ids, image_ids):
+        if text_id in tids: continue
+        if image_id in cids: continue
+        new_images.append(image)
+        new_texts.append(text)
+        tids.add(text_id)
+        cids.add(image_id)
+    images = torch.from_numpy(np.array(new_images))
+    texts = torch.from_numpy(np.array(new_texts))
+    return images, texts
 
 def train(model, data, epoch, optimizer, scaler, scheduler, args, global_trained_steps, teacher_model=None):
     # os.environ["WDS_EPOCH"] = str(epoch)
@@ -175,6 +204,8 @@ def train(model, data, epoch, optimizer, scaler, scheduler, args, global_trained
         optimizer.zero_grad()
 
         images, texts, eos_indices = batch
+        #images, texts, text_ids, image_ids = batch
+        #images, texts = distinct_qid(images, texts, text_ids, image_ids)
 
         images = images.cuda(args.local_device_rank, non_blocking=True)
         texts = texts.cuda(args.local_device_rank, non_blocking=True)
@@ -355,7 +386,15 @@ def evaluate(model, data, epoch, args, steps):
         for i in range(dataloader.num_batches):
             batch = next(data_iter)
             images, texts, eos_indices = batch
+            #images, texts, text_ids, image_ids = batch
+            #images, texts = distinct_qid(images, texts, text_ids, image_ids)
 
+            #loss_ywj, acc_ywj = get_loss(model, images, texts, loss_img, loss_txt, args)
+            #logging.info(
+            #    f"Loss: {loss_ywj.item():.6f} | " +
+            #    (f"Image2Text Acc: {acc_ywj['i2t'].item() * 100:.2f} | " if args.report_training_batch_acc else "") +
+            #    (f"Text2Image Acc: {acc_ywj['t2i'].item() * 100:.2f} | " if args.report_training_batch_acc else "") 
+            #    )
             images = images.cuda(args.local_device_rank, non_blocking=True)
             texts = texts.cuda(args.local_device_rank, non_blocking=True)
             eos_indices = eos_indices.cuda(args.local_device_rank, non_blocking=True)
@@ -400,7 +439,8 @@ def evaluate(model, data, epoch, args, steps):
             f"Image2Text Acc: {i2t_acc.item() * 100:.2f} | " 
             f"Text2Image Acc: {t2i_acc.item() * 100:.2f} | " 
             f"logit_scale: {model.module.logit_scale.data:.3f} | "
-            f"Valid Batch Size: {batch_size}"
+            f"Valid Batch Size: {batch_size} | "
+            f"Valid Grobal Batch Size: {num_elements}"
         )
 
 def cosineSimilarityLoss(feature1, feature2):
