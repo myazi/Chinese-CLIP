@@ -142,8 +142,8 @@ def build_index_Flat(images_embs, cids, urls, texts_embs, keys):
 
 def build_index(images_embs, cids, urls, texts_embs, keys):
     dim = 1024
-    m = 32
-    efc = 800
+    m = 24
+    efc = 500
     efs = 1000
     k = 100
     num = faiss.omp_get_max_threads()
@@ -153,12 +153,13 @@ def build_index(images_embs, cids, urls, texts_embs, keys):
     faiss_index.verbose = True
     faiss_index.hnsw.efConstruction = efc
     faiss_index.hnsw.efSearch = efs
-    faiss_index = faiss.IndexIDMap(faiss_index)
+    #faiss_index = faiss.IndexIDMap(faiss_index)
     #faiss_index = index_type_pca(32)
     #faiss_index = index_type_pq()
     faiss_index.train(images_embs)
-    faiss_index.add_with_ids(images_embs, cids)
-    faiss.write_index(faiss_index, "20240829_cids_m2.index")
+    #faiss_index.add_with_ids(images_embs, cids)
+    faiss_index.add(images_embs)
+    faiss.write_index(faiss_index, "all_keys_25M.index_M24_500")
     exit()
     for l in range(100):
         D, I = faiss_index.search(numpy.array([texts_embs[l]]), k)
@@ -179,7 +180,7 @@ def build_index_hnswlib(images_embs, cids, urls, texts_embs, keys):
             M=m)
     print("start train")
     hnsw_index.add_items(images_embs, cids)
-    hnsw_index.save_index("20240829_cids_m2_1B.index")
+    hnsw_index.save_index("20240829_cids_YouClip_base.index")
     print("index train done")
     exit()
     hnsw_index.set_ef(efs)
@@ -195,8 +196,8 @@ if __name__ == '__main__':
 
     #get_line("/apdcephfs_cq11/share_2973545/wenjieying/metapath2vec/bin/out_train_key_image_seq5_key.txt", "/apdcephfs_cq11/share_2973545/wenjieying/metapath2vec/bin/out_train_key_image_seq5_key.hdf5")
     #exit()
-    data_dir = sys.argv[1]
-    h5_file = sys.argv[2] #image_cid_url_0408.hdf5
+    #data_dir = sys.argv[1]
+    #h5_file = sys.argv[2] #image_cid_url_0408.hdf5
     #1 get texts and images df, get key_cids images.hdf5
     #texts = [data_dir + "/text_" + str(i).zfill(5) + ".parquet" for i in range(0,1)]
     #df_text = get_df(texts, "text") 
@@ -224,10 +225,13 @@ if __name__ == '__main__':
     h5_file = "cid_click_xq_20240528_20240628_click10.hdf5"
     h5_file = "20240829_cids_m2_1B.hdf5"
     #h5_file = "20240829_cids_ernie.hdf5"
+    h5_file = "all_keys_25M.hdf5"
+    h5_file = "20240829_cids_YouClip_base.hdf5"
     hdf5_f = h5py.File(h5_file, 'r')
     images_embs = hdf5_f["vector"]
+    #images_embs = images_embs[:10000]
     cids = hdf5_f["cid"][:]
-    cids = cids.astype(int)
+    #cids = cids.astype(int)
     #urls = hdf5_f["url"]
     urls = ""
     texts_embs = ""

@@ -27,7 +27,9 @@ class ClipEmb(object):
         for image in images:
             try:
                 image_input = self.preprocess(Image.open(BytesIO(image))).unsqueeze(0).to(self.device)
+                #image_input = self.preprocess(Image.open(image)).unsqueeze(0).to(self.device)
             except Exception as e:
+                print("image_input is fail")
                 image_input = torch.zeros((1, 3, 224, 224), device=self.device)
             images_input.append(image_input)
         with torch.no_grad():

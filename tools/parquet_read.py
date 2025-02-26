@@ -95,11 +95,42 @@ def parquet_read(path):
     f.create_dataset("url", data=urls_h5)
     f.close()
 
+def parquet_read_text(path):
+
+    embs_h5 = numpy.zeros((1286318, 768), dtype="float16")
+    cids_h5 = []
+    urls_h5 = []
+    i = 0
+
+    cid_uniq = set()
+    for image in all_file_names:
+        print(image)
+        df = pd.read_parquet(path + "/" + image, columns=['component_id', 'emb', 'url'])
+        cids = df["component_id"]
+        embs = df["emb"]
+        urls = df['url']
+        for cid, emb, url in zip(cids, embs, urls):
+            if cid not in cid_uniq:
+                embs_h5[i:i+1, :] = numpy.asarray(emb, dtype=numpy.float16)
+                cids_h5.append(cid)
+                urls_h5.append(url)
+                i += 1
+                cid_uniq.add(cid)
+    print(len(cids_h5))
+    print(embs_h5.shape)
+    out_file = "20240829_cids_YouClip_base.hdf5"
+    f = h5py.File(out_file, 'w')
+    f.create_dataset("vector", data=embs_h5)
+    f.create_dataset("cid", data=cids_h5)
+    f.create_dataset("url", data=urls_h5)
+    f.close()
+
 if __name__ == '__main__':
     path = sys.argv[1]
     all_file_names = os.listdir(path)
-    output = "./image_history_clip_uniq"
+    #output = "./image_history_clip_uniq"
     #write_parquet(path, all_file_names, output)
     #get_url()
-    parquet_read(path)
+    #parquet_read(path)
+    parquet_read_text(path)
     

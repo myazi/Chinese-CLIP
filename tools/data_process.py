@@ -85,7 +85,7 @@ def get_image(file_name, image_file, image_file_dir):
     os.environ['HTTPS_PROXY'] = "http://9.21.0.122:11113"
     download(
         processes_count=8,
-        thread_count=256,
+        thread_count=8,
         url_list=image_file,
         output_folder=image_file_dir,
         image_size=256,
@@ -94,7 +94,7 @@ def get_image(file_name, image_file, image_file_dir):
         url_col="image_url",
         save_additional_columns=["component_id"],
         distributor="multiprocessing",
-        retries=5,
+        retries=10,
     )
 
 def process_image(images_dir, image_base64):
@@ -109,8 +109,14 @@ def process_image(images_dir, image_base64):
         cids = df['component_id']
         images = df["jpg"]
         statuss = df['status']
-        for cid, image, status, in zip(cids, images, statuss):
+        widths = df['original_width']
+        heights = df['original_height']
+        urls = df['url']
+        #for cid, image, status, in zip(cids, images, statuss):
+        for cid, width, height, url, status in zip(cids, widths, heights, urls, statuss):
             if status == "success":
+                print(str(cid) + "\t" + str(url) + "\t" + str(int(width)) + "\t" + str(int(height)))
+                continue
                 img = Image.open(BytesIO(image))
                 img_buffer = BytesIO()
                 img.save(img_buffer, format=img.format)
@@ -120,7 +126,7 @@ def process_image(images_dir, image_base64):
                 out.write(str(cid) + "\t" + base64_str + "\n")
                 cids_base64[cid] = base64_str
     out.close()
-    print(len(cids_base64))
+    #print(len(cids_base64))
     return cids_base64
 
 def get_sample(file_name, cids_base64, data_dir):
